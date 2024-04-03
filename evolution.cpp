@@ -77,7 +77,7 @@ void os_DCE_Evolution::parseCSV(const int &group, const int &row){
 //    std::cout<<"er="<<er<<std::endl;
 //
 //    std::cout<<"thetaCoef="<<thetaCoef<<std::endl;
-    double e2r=std::pow(er,2);
+    e2r=std::pow(er,2);
     double eM2r=1/e2r;
     this->Deltam=this->omegam-this->omegap;
     this->lmd=(e2r-eM2r)/(e2r+eM2r)*Deltam;
@@ -85,15 +85,17 @@ void os_DCE_Evolution::parseCSV(const int &group, const int &row){
 //      std::cout<<"lambda="<<lmd<<std::endl;
 //      std::cout<<"theta="<<theta<<std::endl;
 //      std::cout<<"Deltam="<<Deltam<<std::endl;
-//    double height1=0.5;
-//
-//    double width1=std::sqrt(-2.0*std::log(height1)/omegac);
-//    double minGrid1=width1/20.0;
-//    this->N1=static_cast<int>(std::ceil(L1*2/minGrid1));
-//    if(N1%2==1){
-//        N1+=1;//make sure N1 is even
-//    }
+    double height1=0.5;
 
+    double width1=std::sqrt(-2.0*std::log(height1)/omegac);
+    double minGrid1=width1/20.0;
+    this->N1=static_cast<int>(std::ceil(L1*2/minGrid1));
+    if(N1%2==1){
+        N1+=1;//make sure N1 is even
+    }
+    if(N1<6000){
+        N1=6000;
+    }
     std::cout<<"N1="<<N1<<std::endl;
     dx1=2*L1/(static_cast<double>(N1));
     dx2=2*L2/(static_cast<double >(N2));
@@ -202,6 +204,7 @@ arma::cx_dmat os_DCE_Evolution::evolution1Step(const int&j, const arma::cx_dmat&
     arma::cx_dmat psiCurr(psi);
 
     double tj=timeValsAll[j];
+//    std::cout<<"tj="<<tj<<std::endl;
 
     ///////////////////operator exp(-idt H1)
     //operator U15, for each column n2
@@ -210,8 +213,266 @@ arma::cx_dmat os_DCE_Evolution::evolution1Step(const int&j, const arma::cx_dmat&
         psiCurr.col(n2)*=std::exp(1i*dt*0.5*g0*std::sqrt(2.0*omegam)*std::cos(omegap*tj)*x2n2);
     }
 
+    //operator U14
+    //construct U14
+    //construct the exponent part
+    arma::cx_dmat U14=-1i*dt*g0*omegac*std::sqrt(2.0*omegam)*std::cos(omegap*tj)*this->U14Exp;
 
 
+    U14=arma::exp(U14);
+    psiCurr=psiCurr %U14;
+
+    //operator U13
+    psiCurr*=std::exp(1i*dt*0.5*Deltam+1i*dt*0.5*omegac);
+
+    //operator U12, for each column n2
+    for(int n2=0;n2<N2;n2++){
+        double x2n2Squared=x2ValsAllSquared[n2];
+        psiCurr.col(n2)*=std::exp(-1i*dt*Deltam*omegam/(2.0*std::cosh(2.0*r))
+                *std::exp(-2.0*r)*x2n2Squared);
+    }
+
+    //operator U11, for each row n1
+    for(int n1=0;n1<N1;n1++){
+        double x1n1Squared=x1ValsAllSquared[n1];
+        psiCurr.row(n1)*=std::exp(-1i*dt*0.5*std::pow(omegac,2)*x1n1Squared);
+    }
+
+    double dbN1=static_cast<double >(N1);
+    double dbN2=static_cast<double >(N2);
+    //////////////////////////exp(-idt H2)
+    // \partial_{x_{1}}^{2}
+    arma::cx_drowvec psiRow=psiCurr.as_row();
+    for(int i=0;i<N1*N2;i++){
+        psiTmp[i]=psiRow(i);
+    }
+    //psi2Y
+    fftw_execute(plan_psi2Y);
+    //for each row n1
+    for(int n1=0;n1<N1;n1++){
+        double kn1Squared=k1ValsAllSquared[n1];
+        for(int n2=0;n2<N2;n2++){
+            Y[n1*N2+n2]*=std::exp(-1i*0.5*kn1Squared*dt);
+        }
+    }
+    //Y2psi
+    fftw_execute(plan_Y2psi);
+    //normalization
+    for(int i=0;i<N1*N2;i++){
+        psiTmp[i]/=dbN1;
+    }
+
+    //\partial_{x_{2}}^{2}
+    //psi2Z
+    fftw_execute(plan_psi2Z);
+    //for each col n2
+    for(int n2=0;n2<N2;n2++){
+        double kn2Squared=k2ValsAllSquared[n2];
+        for(int n1=0;n1<N1;n1++){
+            Z[n2+n1*N2]*=std::exp(-1i*Deltam/(2.0*omegam*std::cosh(2.0*r))
+                    *e2r*kn2Squared*dt);
+        }
+    }
+    //Z2psi
+    fftw_execute(plan_Z2psi);
+    //normalization
+    for(int i=0;i<N1*N2;i++){
+        psiTmp[i]/=dbN2;
+    }
+
+    ////////////////////exp(-idt H3)
+
+    //psi2W
+    fftw_execute(plan_psi2W);
+
+    arma::cx_dcolvec fx1n1Vec(N1);
+    for(int n1=0;n1<N1;n1++){
+        fx1n1Vec(n1)=this->f(n1,tj);
+    }
+    arma::cx_dmat matTmp=arma::kron(fx1n1Vec,k2Row);
+    matTmp*=-1i*dt;
+
+    arma::cx_dmat M=arma::exp(matTmp);
+
+    for(int n1=0;n1<N1;n1++){
+        for(int n2=0;n2<N2;n2++){
+            MArray[n1*N2+n2]=M(n1,n2);
+        }
+    }
+
+    for(int i=0;i<N1*N2;i++){
+        W[i]*=MArray[i];
+    }
+    //W2psi
+    fftw_execute(plan_W2psi);
+
+    //normalization
+    for(int i=0;i<N1*N2;i++){
+        psiTmp[i]/=dbN2;
+    }
+
+
+    arma::cx_dmat psiNext(N1,N2);
+    for(int n1=0;n1<N1;n1++){
+        for(int n2=0;n2<N2;n2++){
+            psiNext(n1,n2)=psiTmp[n1*N2+n2];
+        }
+    }
+
+    return psiNext;
+
+
+
+
+
+}
+
+
+///initialize matrices for computing particle numbers
+void os_DCE_Evolution::popolateMatrices(){
+    //construct H6
+
+    arma::cx_dmat  V0(N1, 3);
+    for(int n1=0;n1<N1;n1++){
+        V0(n1,0)=1.0;
+        V0(n1,1)=-2.0;
+        V0(n1,2)=1.0;
+    }
+
+    arma::ivec D0 = {-1, 0, +1};
+
+    arma::sp_cx_dmat leftMat = arma::spdiags(V0, D0, N1, N1);
+
+    arma::sp_cx_dmat IN2=arma::speye<arma::sp_cx_dmat>(N2,N2);
+
+    H6=-1/(2*std::pow(dx1,2))*arma::kron(leftMat,IN2);
+
+    arma::cx_dmat  V1(N1, 1);
+    for(int n1=0;n1<N1;n1++){
+        V1(n1,0)=x1ValsAllSquared[n1];
+    }
+    arma::ivec D1 = {0};
+    arma::sp_cx_dmat tmp0=arma::spdiags(V1,D1,N1,N1);
+
+    NcMat1=arma::kron(tmp0,IN2);
+
+    arma::cx_dmat  V2(N2, 1);
+    for(int n2=0;n2<N2;n2++){
+        V2(n2,0)=x2ValsAllSquared[n2];
+    }
+    arma::ivec D2 = {0};
+    arma::sp_cx_dmat S2=arma::spdiags(V2,D2,N2,N2);
+
+
+
+    arma::cx_dmat  V3(N2, 3);
+    arma::ivec D3 = {-1, 0, +1};
+    for(int n2=0;n2<N2;n2++){
+        V3(n2,0)=1.0;
+        V3(n2,1)=-2.0;
+        V3(n2,2)=1.0;
+    }
+
+    arma::sp_cx_dmat Q2 = arma::spdiags(V3,D3,N2,N2);
+    arma::sp_cx_dmat IN1=arma::speye<arma::sp_cx_dmat>(N1,N1);
+    NmPart1=arma::kron(IN1,S2);
+    NmPart2=arma::kron(IN1,Q2);
+
+//    std::cout<<arma::cx_dmat (Q2)<<std::endl;
+
+}
+
+///
+/// @param psi wavefunction
+/// @return photon number
+double os_DCE_Evolution::avgNc(const arma::cx_dmat& psi){
+
+arma::cx_dcolvec Psi=psi.as_col();
+std::complex<double> val=0.5*omegac*arma::cdot(Psi,NcMat1*Psi)-0.5*arma::cdot(Psi,Psi)+1/omegac*arma::cdot(Psi,H6*Psi);
+
+    return std::abs(val);
+}
+
+
+///
+/// @param psi wavefunction
+/// @return phonon number
+double os_DCE_Evolution::avgNm(const arma::cx_dmat& psi) {
+
+    arma::cx_dcolvec Psi = psi.as_col();
+    std::complex<double>val=0.5*omegam*arma::cdot(Psi,NmPart1*Psi)-0.5*arma::cdot(Psi,Psi)-1/(2.0*omegam*std::pow(dx2,2))*arma::cdot(Psi,NmPart2*Psi);
+
+    return std::abs(val);
+
+}
+
+
+///
+/// @param psiIn starting value of the wavefunction in one flush
+/// @param fls flush number
+/// @return starting value of the wavefunction in the next flush
+arma::cx_dmat os_DCE_Evolution::oneFlush(const arma::cx_dmat& psiIn, const int& fls){
+    int startingInd=fls * stepsPerFlush;
+    arma::cx_dmat psiCurr(psiIn);
+    arma::cx_dmat psiNext;
+    std::vector<double> photonPerFlush;
+    std::vector<double> phononPerFlush;
+    photonPerFlush.push_back(avgNc(psiCurr));
+    phononPerFlush.push_back(avgNm(psiCurr));
+    for(int j=0;j<stepsPerFlush;j++){
+        int indCurr=startingInd+j;
+        psiNext= evolution1Step(indCurr,psiCurr);
+        psiCurr=psiNext;
+        photonPerFlush.push_back(avgNc(psiCurr));
+        phononPerFlush.push_back(avgNm(psiCurr));
+
+    }
+
+    //to json
+    std::string suffix="flush"+std::to_string(fls)+"N1"+std::to_string(N1)+"N2"+std::to_string(N2)+"L1"+std::to_string(L1)+"L2"+std::to_string(L2);
+    std::string outNumFileName=this->outDir+"Num"+suffix+".json";
+
+
+
+    boost::json::object objNum;
+    boost::json::array arrPhoton;
+    for(const auto&val:photonPerFlush){
+        arrPhoton.push_back(val);
+    }
+    objNum["photonNum"]=arrPhoton;
+
+    boost::json::array arrPhonon;
+    for(const auto&val:phononPerFlush){
+        arrPhonon.push_back(val);
+    }
+    objNum["phononNum"]=arrPhonon;
+    std::ofstream ofsNum(outNumFileName);
+    std::string num_str=boost::json::serialize(objNum);
+    ofsNum<<num_str<<std::endl;
+    ofsNum.close();
+
+    return psiCurr;
+
+
+
+
+
+}
+
+
+///evolution of wavefunctuion
+void os_DCE_Evolution::evolution(){
+    arma::cx_dmat psiStart(psi0);
+    arma::cx_dmat psiFinal;
+    for(int fls=0;fls<flushNum;fls++){
+        const auto tFlushStart{std::chrono::steady_clock::now()};
+        psiFinal= oneFlush(psiStart,fls);
+        psiStart=psiFinal;
+        const auto tFlushEnd{std::chrono::steady_clock::now()};
+        const std::chrono::duration<double> elapsed_secondsAll{tFlushEnd - tFlushStart};
+        std::cout<<"Flush"+std::to_string(fls)+" time: "<< elapsed_secondsAll.count()  << " s" << std::endl;
+
+    }
 
 
 }

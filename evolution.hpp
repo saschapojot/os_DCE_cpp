@@ -14,7 +14,9 @@
 #include <array>
 #include <boost/filesystem.hpp>
 #include <armadillo>
-
+#include <fftw3.h>
+#include <boost/json.hpp>
+#include <fstream>
 
 namespace fs = boost::filesystem;
 using namespace std::complex_literals;
@@ -77,16 +79,111 @@ public:
                 this->timeValsAll.push_back(indTmp*dt);
             }
         }
-//        printVec(timeValsAll);
-//        std::cout<<"dt="<<dt<<std::endl;
-//        std::cout<<"dx1="<<dx1<<std::endl;
-//        std::cout<<"dx2="<<dx2<<std::endl;
-//        std::cout<<"M="<<M<<std::endl;
-//        std::cout<<"x1vec has size "<<x1ValsAll.size()<<std::endl;
-//        std::cout<<"x2vec has size "<<x2ValsAll.size()<<std::endl;
+
+        arma::cx_drowvec vec_x2Row(N2);
+        for (int n2=0;n2<N2;n2++){
+            vec_x2Row(n2)=x2ValsAll[n2];
+        }
+        arma::cx_dcolvec vec_x1SquaredCol(N1);
+        for(int n1=0;n1<N1;n1++){
+            vec_x1SquaredCol(n1)=x1ValsAllSquared[n1];
+        }
+        this->U14Exp=arma::kron(vec_x1SquaredCol,vec_x2Row);
+
+        this->r=std::log(er);
+
+        this->k2Row=arma::cx_drowvec(N2);
+        for(int n2=0;n2<N2;n2++){
+            k2Row(n2)=k2ValsAll[n2];
+        }
+
+        Y=new std::complex<double>[N1*N2];
+        Z=new std::complex<double>[N1*N2];
+        W=new std::complex<double>[N1*N2];
+        psiTmp=new std::complex<double>[N1*N2];
+        MArray=new std::complex<double>[N1*N2];
+
+        //row fft
+        int rowfft_rank=1;
+        int rowfft_n[]={N2};
+        int rowfft_howmany=N1;
+        int rowfft_istride=1;
+        int rowfft_ostride=1;
+        int rowfft_idist=N2;
+        int rowfft_odist=N2;
+        int *rowfft_inembed = rowfft_n, *rowfft_onembed = rowfft_n;
+        //psi and Z
+        plan_psi2Z=fftw_plan_many_dft(rowfft_rank,rowfft_n,rowfft_howmany,
+                                                reinterpret_cast<fftw_complex*>(psiTmp),rowfft_inembed,
+                                                rowfft_istride,rowfft_idist,reinterpret_cast<fftw_complex*>(Z),
+                                                rowfft_onembed,rowfft_ostride,rowfft_odist,FFTW_FORWARD,FFTW_MEASURE);
+
+        plan_Z2psi=fftw_plan_many_dft(rowfft_rank,rowfft_n,rowfft_howmany,
+                                                reinterpret_cast<fftw_complex*>(Z),rowfft_inembed,
+                                                rowfft_istride,rowfft_idist,reinterpret_cast<fftw_complex*>(psiTmp),
+                                                rowfft_onembed,rowfft_ostride,rowfft_odist,FFTW_BACKWARD,FFTW_MEASURE);
+
+        //psi and W
+        plan_psi2W=fftw_plan_many_dft(rowfft_rank,rowfft_n,rowfft_howmany,
+                                                reinterpret_cast<fftw_complex*>(psiTmp),rowfft_inembed,
+                                                rowfft_istride,rowfft_idist,reinterpret_cast<fftw_complex*>(W),
+                                                rowfft_onembed,rowfft_ostride,rowfft_odist,FFTW_FORWARD,FFTW_MEASURE);
+
+
+        plan_W2psi=fftw_plan_many_dft(rowfft_rank,rowfft_n,rowfft_howmany,
+                                                reinterpret_cast<fftw_complex*>(W),rowfft_inembed,
+                                                rowfft_istride,rowfft_idist,reinterpret_cast<fftw_complex*>(psiTmp),
+                                                rowfft_onembed,rowfft_ostride,rowfft_odist,FFTW_BACKWARD,FFTW_MEASURE);
+
+
+
+        //col fft
+        //psi and Y
+        int colfft_rank=1;
+        int colfft_n[]={N1};
+        int colfft_howmany=N2;
+        int colfft_idist=1;
+        int colfft_odist=1;
+        int colfft_istride=N2;
+        int colfft_ostride=N2;
+        int *colfft_inembed = colfft_n, *colfft_onembed = colfft_n;
+
+        plan_psi2Y= fftw_plan_many_dft(colfft_rank,colfft_n,colfft_howmany,
+                                                 reinterpret_cast<fftw_complex*>(psiTmp),colfft_inembed,
+                                                 colfft_istride,colfft_idist,reinterpret_cast<fftw_complex*>(Y),
+                                                 colfft_onembed,colfft_ostride,colfft_odist,FFTW_FORWARD,FFTW_MEASURE);
+
+        plan_Y2psi=fftw_plan_many_dft(colfft_rank,colfft_n,colfft_howmany,
+                                                reinterpret_cast<fftw_complex*>(Y),colfft_inembed,
+                                                colfft_istride,colfft_idist,reinterpret_cast<fftw_complex*>(psiTmp),
+                                                colfft_onembed,colfft_ostride,colfft_odist,FFTW_BACKWARD,FFTW_MEASURE);
+
+
+
+
+
+        this->outDir="./groupNew"+std::to_string(groupNum)+"/row"+std::to_string(rowNum)+"/";
+        if(!fs::is_directory(outDir) || !fs::exists(outDir)){
+            fs::create_directories(outDir);
+        }
 
     }//end of constructor
 
+    ~os_DCE_Evolution(){
+
+        delete[] Y;
+        delete[]Z;
+        delete[]W;
+        delete[]psiTmp;
+        delete[]MArray;
+        fftw_destroy_plan(plan_psi2Y);
+        fftw_destroy_plan(plan_Y2psi);
+        fftw_destroy_plan(plan_psi2Z);
+        fftw_destroy_plan(plan_Z2psi);
+        fftw_destroy_plan(plan_psi2W);
+        fftw_destroy_plan(plan_W2psi);
+
+    }
 
 
 
@@ -105,12 +202,14 @@ public:
     double theta=0;
     double lmd=0;
     double Deltam=0;
+    double r=0;
+    double e2r=0;
 
-    int N1=10;//000;
-    int N2=12;//000;
+    int N1=6000;
+    int N2=4096;
 
-    double L1=0.5;
-    double L2=0.8;
+    double L1=5;
+    double L2=80;
     double dx1=0;
     double dx2=0;
 
@@ -133,10 +232,33 @@ public:
     std::vector<double> k1ValsAllSquared;
     std::vector<double> k2ValsAllSquared;
 
+    ///the following values Y,Z,W, psiTmp are pointers used in fft
+    std::complex<double> *Y;
+    std::complex<double> *Z;
+    std::complex<double> *W;
+    std::complex<double> *psiTmp;
+    std::complex<double> *MArray;
+    fftw_plan plan_psi2Y;
+    fftw_plan plan_Y2psi;
+    fftw_plan plan_psi2Z;
+    fftw_plan plan_Z2psi;
+    fftw_plan plan_psi2W;
+    fftw_plan plan_W2psi;
+
+
+
 //    arma::cx_dvec psi0;
     arma::cx_dmat psi0;
+    arma::cx_dmat U14Exp;
+    arma::cx_drowvec k2Row;
 
+    //matrices for computing particle numbers
+    arma::sp_cx_dmat H6;
+    arma::sp_cx_dmat NcMat1;
+    arma::sp_cx_dmat NmPart1;
+    arma::sp_cx_dmat NmPart2;
 
+    std::string outDir;
 
 public:
 
@@ -184,6 +306,29 @@ public:
     /// @param psi wavefunction at the beginning of the time step j
     /// @return
     arma::cx_dmat evolution1Step(const int&j, const arma::cx_dmat& psi);
+
+    ///initialize matrices for computing particle numbers
+    void popolateMatrices();
+
+    ///
+    /// @param psi wavefunction
+    /// @return photon number
+    double avgNc(const arma::cx_dmat& psi);
+
+    ///
+    /// @param psi wavefunction
+    /// @return phonon number
+    double avgNm(const arma::cx_dmat& psi);
+
+
+    ///
+    /// @param psiIn starting value of the wavefunction in one flush
+    /// @param fls flush number
+    /// @return starting value of the wavefunction in the next flush
+    arma::cx_dmat oneFlush(const arma::cx_dmat& psiIn, const int& fls);
+
+    ///evolution of wavefunctuion
+    void evolution();
 
 };
 
