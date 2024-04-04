@@ -387,7 +387,8 @@ void os_DCE_Evolution::popolateMatrices(){
 /// @return photon number
 double os_DCE_Evolution::avgNc(const arma::cx_dmat& psi){
 
-arma::cx_dcolvec Psi=psi.as_col();
+    arma::cx_drowvec PsiRow = psi.as_row();
+    arma::cx_dcolvec Psi=PsiRow.t();
 std::complex<double> val=0.5*omegac*arma::cdot(Psi,NcMat1*Psi)-0.5*arma::cdot(Psi,Psi)+1/omegac*arma::cdot(Psi,H6*Psi);
 
     return std::abs(val);
@@ -399,7 +400,8 @@ std::complex<double> val=0.5*omegac*arma::cdot(Psi,NcMat1*Psi)-0.5*arma::cdot(Ps
 /// @return phonon number
 double os_DCE_Evolution::avgNm(const arma::cx_dmat& psi) {
 
-    arma::cx_dcolvec Psi = psi.as_col();
+    arma::cx_drowvec PsiRow = psi.as_row();
+    arma::cx_dcolvec Psi=PsiRow.t();
     std::complex<double>val=0.5*omegam*arma::cdot(Psi,NmPart1*Psi)-0.5*arma::cdot(Psi,Psi)-1/(2.0*omegam*std::pow(dx2,2))*arma::cdot(Psi,NmPart2*Psi);
 
     return std::abs(val);

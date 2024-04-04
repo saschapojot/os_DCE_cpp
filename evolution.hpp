@@ -217,7 +217,7 @@ public:
     double tFlushStart=0;
     double tFlushStop=0.001;
     double tTotPerFlush=tFlushStop-tFlushStart;
-    int flushNum=10;
+    int flushNum=1;
     int stepsPerFlush=static_cast<int>(std::ceil(tTotPerFlush/dtEst));
     double dt=tTotPerFlush/static_cast<double >(stepsPerFlush);
     std::vector<double> timeValsAll;
