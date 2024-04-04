@@ -466,6 +466,9 @@ arma::cx_dmat os_DCE_Evolution::oneFlush(const arma::cx_dmat& psiIn, const int& 
 void os_DCE_Evolution::evolution(){
     arma::cx_dmat psiStart(psi0);
     arma::cx_dmat psiFinal;
+    std::string suffix_wv="N1"+std::to_string(N1)+"N2"+std::to_string(N2)+"L1"+std::to_string(L1)+"L2"+std::to_string(L2);
+    std::string initWvName=this->outDir+"initWvFunction"+suffix_wv+".txt";
+    psiStart.save(initWvName,arma::raw_ascii);
     for(int fls=0;fls<flushNum;fls++){
         const auto tFlushStart{std::chrono::steady_clock::now()};
         psiFinal= oneFlush(psiStart,fls);
@@ -475,6 +478,7 @@ void os_DCE_Evolution::evolution(){
         std::cout<<"Flush"+std::to_string(fls)+" time: "<< elapsed_secondsAll.count()  << " s" << std::endl;
 
     }
-
+    std::string finalWvName=this->outDir+"finalWvFunction"+suffix_wv+".txt";
+    psiFinal.save(finalWvName,arma::raw_ascii);
 
 }
