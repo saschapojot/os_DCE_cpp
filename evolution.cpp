@@ -88,14 +88,17 @@ void os_DCE_Evolution::parseCSV(const int &group, const int &row){
     double height1=0.5;
 
     double width1=std::sqrt(-2.0*std::log(height1)/omegac);
-    double minGrid1=width1/20.0;
+    double minGrid1=width1/10.0;
     this->N1=static_cast<int>(std::ceil(L1*2/minGrid1));
     if(N1%2==1){
         N1+=1;//make sure N1 is even
     }
-    if(N1<6000){
-        N1=6000;
+    if(N1<9000){
+        N1=9000;
     }
+//for inParamsNew6, N1=6000
+//for inParamsNew7, N1=9000
+
     std::cout<<"N1="<<N1<<std::endl;
     dx1=2*L1/(static_cast<double>(N1));
     dx2=2*L2/(static_cast<double >(N2));
