@@ -23,6 +23,7 @@ using namespace std::complex_literals;
 const auto PI=std::numbers::pi;
 
 //This subroutine computes evolution using operator splitting and particle number
+// and verifies the solution
 class os_DCE_Evolution {
 
 
@@ -96,6 +97,11 @@ public:
         for(int n2=0;n2<N2;n2++){
             k2Row(n2)=k2ValsAll[n2];
         }
+
+        E1=0.5*omegac*(2.0*static_cast<double >(jH1)+1.0);
+
+        E2=Deltam/(std::cosh(2.0*r))*(static_cast<double >(jH2)+0.5);
+
 
         Y=new std::complex<double>[N1*N2];
         Z=new std::complex<double>[N1*N2];
@@ -205,19 +211,19 @@ public:
     double r=0;
     double e2r=0;
 
-    int N1=6000;
-    int N2=4096;
+    int N1=100;
+    int N2=500;
 
-    double L1=5;
-    double L2=80;
+    double L1=1;
+    double L2=5;
     double dx1=0;
     double dx2=0;
 
-    double dtEst=0.0001;
+    double dtEst=0.0005;
     double tFlushStart=0;
-    double tFlushStop=0.001;
+    double tFlushStop=0.1;
     double tTotPerFlush=tFlushStop-tFlushStart;
-    int flushNum=3000;
+    int flushNum=3;
     int stepsPerFlush=static_cast<int>(std::ceil(tTotPerFlush/dtEst));
     double dt=tTotPerFlush/static_cast<double >(stepsPerFlush);
     std::vector<double> timeValsAll;
@@ -251,6 +257,7 @@ public:
     arma::cx_dmat psi0;
     arma::cx_dmat U14Exp;
     arma::cx_drowvec k2Row;
+    arma::cx_dmat psiSpace;
 
     //matrices for computing particle numbers
     arma::sp_cx_dmat H6;
@@ -259,7 +266,8 @@ public:
     arma::sp_cx_dmat NmPart2;
 
     std::string outDir;
-
+     double E1=0;
+     double E2=0;
 public:
 
     /// @param group group number
@@ -329,6 +337,15 @@ public:
 
     ///evolution of wavefunctuion
     void evolution();
+
+    ///
+    /// @param j time ind
+    /// @return analytical solution for g0=0
+    arma::cx_dmat  psit(const int &j);
+
+    double funcf(int n1);
+
+    double funcg(int n2);
 
 };
 
