@@ -437,18 +437,18 @@ arma::cx_dmat os_DCE_Evolution::oneFlush(const arma::cx_dmat& psiIn, const int& 
     arma::cx_dmat psiNext;
     std::vector<double> photonPerFlush;
     std::vector<double> phononPerFlush;
-    std::vector<double> analytical_photonPerFlush;
-    std::vector<double> analytical_phononPerFlush;
+//    std::vector<double> analytical_photonPerFlush;
+//    std::vector<double> analytical_phononPerFlush;
     photonPerFlush.push_back(avgNc(psiCurr));
     phononPerFlush.push_back(avgNm(psiCurr));
 
-   std::vector<double> diffPerFlush;
-    auto analytical_start= psit(startingInd);
+//   std::vector<double> diffPerFlush;
+//    auto analytical_start= psit(startingInd);
 
-    analytical_photonPerFlush.push_back(avgNc(analytical_start));
-    analytical_phononPerFlush.push_back(avgNm(analytical_start));
+//    analytical_photonPerFlush.push_back(avgNc(analytical_start));
+//    analytical_phononPerFlush.push_back(avgNm(analytical_start));
 
-    diffPerFlush.push_back(arma::norm(analytical_start-psiCurr,2));
+//    diffPerFlush.push_back(arma::norm(analytical_start-psiCurr,2));
     for(int j=0;j<stepsPerFlush;j++){
         int indCurr=startingInd+j;
         psiNext= evolution1Step(indCurr,psiCurr);
@@ -456,11 +456,11 @@ arma::cx_dmat os_DCE_Evolution::oneFlush(const arma::cx_dmat& psiIn, const int& 
         photonPerFlush.push_back(avgNc(psiCurr));
         phononPerFlush.push_back(avgNm(psiCurr));
 
-        analytical_start= psit(indCurr+1);
-        diffPerFlush.push_back(arma::norm(analytical_start-psiCurr,2));
+//        analytical_start= psit(indCurr+1);
+//        diffPerFlush.push_back(arma::norm(analytical_start-psiCurr,2));
 
-        analytical_photonPerFlush.push_back(avgNc(analytical_start));
-        analytical_phononPerFlush.push_back(avgNm(analytical_start));
+//        analytical_photonPerFlush.push_back(avgNc(analytical_start));
+//        analytical_phononPerFlush.push_back(avgNm(analytical_start));
 
     }
 
@@ -483,23 +483,23 @@ arma::cx_dmat os_DCE_Evolution::oneFlush(const arma::cx_dmat& psiIn, const int& 
     }
     objNum["phononNum"]=arrPhonon;
 
-    boost::json::array arrDiff;
-    for(const auto&val:diffPerFlush){
-        arrDiff.push_back(val);
-    }
-    objNum["diff"]=arrDiff;
+//    boost::json::array arrDiff;
+//    for(const auto&val:diffPerFlush){
+//        arrDiff.push_back(val);
+//    }
+//    objNum["diff"]=arrDiff;
 
-    boost::json::array analy_photon;
-    for(const auto &val:analytical_photonPerFlush){
-        analy_photon.push_back(val);
-    }
-objNum["ana_photon"]=analy_photon;
+//    boost::json::array analy_photon;
+//    for(const auto &val:analytical_photonPerFlush){
+//        analy_photon.push_back(val);
+//    }
+//objNum["ana_photon"]=analy_photon;
 
-    boost::json::array analy_phonon;
-    for(const auto& val:analytical_phononPerFlush){
-        analy_phonon.push_back(val);
-    }
-    objNum["ana_phonon"]=analy_phonon;
+//    boost::json::array analy_phonon;
+//    for(const auto& val:analytical_phononPerFlush){
+//        analy_phonon.push_back(val);
+//    }
+//    objNum["ana_phonon"]=analy_phonon;
 
     std::ofstream ofsNum(outNumFileName);
     std::string num_str=boost::json::serialize(objNum);
@@ -571,5 +571,5 @@ arma::cx_dmat  os_DCE_Evolution::psit(const int &j){
     }
 
     return psiSpace*std::exp(-1i*E1*tj)*std::exp(-1i*E2*tj)
-    *std::exp(1i*0.5*Deltam*tj+1i*0.5*omegam*tj);
+    *std::exp(1i*0.5*Deltam*tj+1i*0.5*omegac*tj);
 }
