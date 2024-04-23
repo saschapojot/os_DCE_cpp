@@ -442,7 +442,9 @@ arma::cx_dmat os_DCE_Evolution::oneFlush(const arma::cx_dmat& psiIn, const int& 
     photonPerFlush.push_back(avgNc(psiCurr));
     phononPerFlush.push_back(avgNm(psiCurr));
 
+
 //   std::vector<double> diffPerFlush;
+
 //    auto analytical_start= psit(startingInd);
 
 //    analytical_photonPerFlush.push_back(avgNc(analytical_start));
