@@ -215,7 +215,7 @@ public:
     int N2=7200;
 
     double L1=5;
-    double L2=80;
+    double L2=150;
     double dx1=0;
     double dx2=0;
 
