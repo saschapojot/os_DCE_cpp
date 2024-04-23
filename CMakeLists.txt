@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
-include_directories("/home/polya/cppLocal/fftw3/include")
+include_directories("/home/polya/cppLocal/fftw/include")
 include_directories("/home/polya/cppLocal/armadillo/include")
 
 
@@ -63,5 +63,5 @@ target_link_libraries(os Boost::json)
 file(GLOB LIBS_SO "/home/polya/cppLocal/armadillo/lib/*.so")
 target_link_libraries(os ${LIBS_SO})
 
-file(GLOB LIBS_A "/home/polya/cppLocal/fftw3/lib/*.a")
+file(GLOB LIBS_A "/home/polya/cppLocal/fftw/lib/*.a")
 target_link_libraries(os ${LIBS_A})
