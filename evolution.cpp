@@ -78,6 +78,7 @@ void os_DCE_Evolution::parseCSV(const int &group, const int &row){
 //
 //    std::cout<<"thetaCoef="<<thetaCoef<<std::endl;
     e2r=std::pow(er,2);
+    r=std::log(er);
     double eM2r=1/e2r;
     this->Deltam=this->omegam-this->omegap;
     this->lmd=(e2r-eM2r)/(e2r+eM2r)*Deltam;
@@ -88,14 +89,16 @@ void os_DCE_Evolution::parseCSV(const int &group, const int &row){
     double height1=0.5;
 
     double width1=std::sqrt(-2.0*std::log(height1)/omegac);
-    double minGrid1=width1/10.0;
+//    std::cout<<"width1="<<std::to_string(width1)<<std::endl;
+    double minGrid1=width1/20.0;
+//    std::cout<<"minGrid1="<<std::to_string(minGrid1)<<std::endl;
     this->N1=static_cast<int>(std::ceil(L1*2/minGrid1));
     if(N1%2==1){
         N1+=1;//make sure N1 is even
     }
-    if(N1<9000){
-        N1=9000;
-    }
+//    if(N1<9000){
+//        N1=9000;
+//    }
 //for inParamsNew6, N1=6000
 //for inParamsNew7, N1=9000
 
@@ -155,8 +158,8 @@ double os_DCE_Evolution::f2(int n2){
     double x2TmpSquared=x2ValsAllSquared[n2];
     double x2Tmp=x2ValsAll[n2];
 
-    double valTmp=std::exp(-0.5 * omegam * x2TmpSquared)
-                  *std::hermite(this->jH2,std::sqrt(omegam)*x2Tmp);
+    double valTmp=std::exp(-0.5 * omegam*std::exp(-2.0*r) * x2TmpSquared)
+                  *std::hermite(this->jH2,std::sqrt(omegam*std::exp(-2.0*r))*x2Tmp);
 
     return valTmp;
 
@@ -176,6 +179,18 @@ void os_DCE_Evolution::initPsiSerial(){
     }
     this->psi0=arma::kron(vec1,vec2);
     this->psi0/=arma::norm(psi0,2);
+//    std::cout<<"finish init"<<std::endl;
+
+
+
+
+
+//    printVec(v2);
+    this->psiSpace=arma::kron(vec1,vec2);
+//    std::cout<<psiSpace<<std::endl;
+//    std::cout<<"psiSpace norm="<<arma::norm(psiSpace,2)<<std::endl;
+    psiSpace/=arma::norm(psiSpace,2);
+
 
 //    std::cout<<psi0<<std::endl;
 
@@ -422,14 +437,30 @@ arma::cx_dmat os_DCE_Evolution::oneFlush(const arma::cx_dmat& psiIn, const int& 
     arma::cx_dmat psiNext;
     std::vector<double> photonPerFlush;
     std::vector<double> phononPerFlush;
+    std::vector<double> analytical_photonPerFlush;
+    std::vector<double> analytical_phononPerFlush;
     photonPerFlush.push_back(avgNc(psiCurr));
     phononPerFlush.push_back(avgNm(psiCurr));
+
+   std::vector<double> diffPerFlush;
+    auto analytical_start= psit(startingInd);
+
+    analytical_photonPerFlush.push_back(avgNc(analytical_start));
+    analytical_phononPerFlush.push_back(avgNm(analytical_start));
+
+    diffPerFlush.push_back(arma::norm(analytical_start-psiCurr,2));
     for(int j=0;j<stepsPerFlush;j++){
         int indCurr=startingInd+j;
         psiNext= evolution1Step(indCurr,psiCurr);
         psiCurr=psiNext;
         photonPerFlush.push_back(avgNc(psiCurr));
         phononPerFlush.push_back(avgNm(psiCurr));
+
+        analytical_start= psit(indCurr+1);
+        diffPerFlush.push_back(arma::norm(analytical_start-psiCurr,2));
+
+        analytical_photonPerFlush.push_back(avgNc(analytical_start));
+        analytical_phononPerFlush.push_back(avgNm(analytical_start));
 
     }
 
@@ -451,6 +482,25 @@ arma::cx_dmat os_DCE_Evolution::oneFlush(const arma::cx_dmat& psiIn, const int& 
         arrPhonon.push_back(val);
     }
     objNum["phononNum"]=arrPhonon;
+
+    boost::json::array arrDiff;
+    for(const auto&val:diffPerFlush){
+        arrDiff.push_back(val);
+    }
+    objNum["diff"]=arrDiff;
+
+    boost::json::array analy_photon;
+    for(const auto &val:analytical_photonPerFlush){
+        analy_photon.push_back(val);
+    }
+objNum["ana_photon"]=analy_photon;
+
+    boost::json::array analy_phonon;
+    for(const auto& val:analytical_phononPerFlush){
+        analy_phonon.push_back(val);
+    }
+    objNum["ana_phonon"]=analy_phonon;
+
     std::ofstream ofsNum(outNumFileName);
     std::string num_str=boost::json::serialize(objNum);
     ofsNum<<num_str<<std::endl;
@@ -484,4 +534,42 @@ void os_DCE_Evolution::evolution(){
     std::string finalWvName=this->outDir+"finalWvFunction"+suffix_wv+".txt";
     psiFinal.save(finalWvName,arma::raw_ascii);
 
+}
+double os_DCE_Evolution::funcf(int n1){
+    double x1TmpSquared=x1ValsAllSquared[n1];
+    double x1Tmp=x1ValsAll[n1];
+
+    double valTmp = std::exp(-0.5 * omegac * x1TmpSquared)
+                    * std::hermite(this->jH1, std::sqrt(omegac) * x1Tmp);
+//    std::cout<<valTmp<<std::endl;
+
+    return valTmp;
+
+}
+
+double os_DCE_Evolution::funcg(int n2) {
+    double x2TmpSquared=x2ValsAllSquared[n2];
+    double x2Tmp=x2ValsAll[n2];
+    double coef=omegam*std::exp(-2.0*r);
+
+    double valTmp=std::exp(-0.5*coef*x2TmpSquared)*std::hermite(this->jH2,std::sqrt(coef)*x2Tmp);
+//    std::cout<<valTmp<<std::endl;
+
+    return valTmp;
+}
+
+
+///
+/// @param j time ind
+/// @return analytical solution for g0=0
+arma::cx_dmat  os_DCE_Evolution::psit(const int &j){
+
+    double tjminus1=timeValsAll[j-1];
+    double tj=tjminus1+dt;
+    if (j==0){
+        tj=0;
+    }
+
+    return psiSpace*std::exp(-1i*E1*tj)*std::exp(-1i*E2*tj)
+    *std::exp(1i*0.5*Deltam*tj+1i*0.5*omegam*tj);
 }

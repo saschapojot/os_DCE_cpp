@@ -103,7 +103,7 @@ def readFiles(firstFileInd,lastFileInd):
     return photonNumsAll,phononNumsAll
 
 flsStart=0
-flsEnd=2000
+flsEnd=2999
 
 photonNumsAll,phononNumsAll=readFiles(flsStart,flsEnd)
 #outdir
@@ -169,9 +169,9 @@ psiFinal=np.abs(np.array(psiFinal))
 
 plt.figure()
 plt.imshow(psiFinal)
-plt.title("final")
+plt.title("finalfls"+str(flsEnd))
 plt.colorbar()
-plt.savefig(path2+"final.png")
+plt.savefig(path2+"finalfls"+str(flsEnd)+".png")
 # plt.close()
 
 psiInit=arma.cx_mat()
