@@ -211,12 +211,22 @@ public:
     double r=0;
     double e2r=0;
 
+    //params for 7
     int N1=6000;
-    int N2=7200;
+    int N2=6000;
 
     double L1=5;
-    double L2=150;
+    double L2=80;
+
+      //params for 5
+//    double L1=2;
+//    double L2=8;
+//    int N1=400;
+//    int N2=1500;
+//
+
     double dx1=0;
+
     double dx2=0;
 
     double dtEst=0.0001;

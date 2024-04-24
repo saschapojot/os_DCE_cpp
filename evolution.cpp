@@ -158,8 +158,8 @@ double os_DCE_Evolution::f2(int n2){
     double x2TmpSquared=x2ValsAllSquared[n2];
     double x2Tmp=x2ValsAll[n2];
 
-    double valTmp=std::exp(-0.5 * omegam*std::exp(-2.0*r) * x2TmpSquared)
-                  *std::hermite(this->jH2,std::sqrt(omegam*std::exp(-2.0*r))*x2Tmp);
+    double valTmp=std::exp(-0.5 * omegam * x2TmpSquared)
+                  *std::hermite(this->jH2,std::sqrt(omegam)*x2Tmp);
 
     return valTmp;
 
