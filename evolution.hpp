@@ -23,6 +23,7 @@ using namespace std::complex_literals;
 const auto PI=std::numbers::pi;
 
 //This subroutine computes evolution using operator splitting and particle number
+// and verifies the solution
 class os_DCE_Evolution {
 
 
@@ -97,6 +98,11 @@ public:
             k2Row(n2)=k2ValsAll[n2];
         }
 
+        E1=0.5*omegac*(2.0*static_cast<double >(jH1)+1.0);
+
+        E2=Deltam/(std::cosh(2.0*r))*(static_cast<double >(jH2)+0.5);
+
+
         Y=new std::complex<double>[N1*N2];
         Z=new std::complex<double>[N1*N2];
         W=new std::complex<double>[N1*N2];
@@ -114,26 +120,26 @@ public:
         int *rowfft_inembed = rowfft_n, *rowfft_onembed = rowfft_n;
         //psi and Z
         plan_psi2Z=fftw_plan_many_dft(rowfft_rank,rowfft_n,rowfft_howmany,
-                                                reinterpret_cast<fftw_complex*>(psiTmp),rowfft_inembed,
-                                                rowfft_istride,rowfft_idist,reinterpret_cast<fftw_complex*>(Z),
-                                                rowfft_onembed,rowfft_ostride,rowfft_odist,FFTW_FORWARD,FFTW_MEASURE);
+                                      reinterpret_cast<fftw_complex*>(psiTmp),rowfft_inembed,
+                                      rowfft_istride,rowfft_idist,reinterpret_cast<fftw_complex*>(Z),
+                                      rowfft_onembed,rowfft_ostride,rowfft_odist,FFTW_FORWARD,FFTW_MEASURE);
 
         plan_Z2psi=fftw_plan_many_dft(rowfft_rank,rowfft_n,rowfft_howmany,
-                                                reinterpret_cast<fftw_complex*>(Z),rowfft_inembed,
-                                                rowfft_istride,rowfft_idist,reinterpret_cast<fftw_complex*>(psiTmp),
-                                                rowfft_onembed,rowfft_ostride,rowfft_odist,FFTW_BACKWARD,FFTW_MEASURE);
+                                      reinterpret_cast<fftw_complex*>(Z),rowfft_inembed,
+                                      rowfft_istride,rowfft_idist,reinterpret_cast<fftw_complex*>(psiTmp),
+                                      rowfft_onembed,rowfft_ostride,rowfft_odist,FFTW_BACKWARD,FFTW_MEASURE);
 
         //psi and W
         plan_psi2W=fftw_plan_many_dft(rowfft_rank,rowfft_n,rowfft_howmany,
-                                                reinterpret_cast<fftw_complex*>(psiTmp),rowfft_inembed,
-                                                rowfft_istride,rowfft_idist,reinterpret_cast<fftw_complex*>(W),
-                                                rowfft_onembed,rowfft_ostride,rowfft_odist,FFTW_FORWARD,FFTW_MEASURE);
+                                      reinterpret_cast<fftw_complex*>(psiTmp),rowfft_inembed,
+                                      rowfft_istride,rowfft_idist,reinterpret_cast<fftw_complex*>(W),
+                                      rowfft_onembed,rowfft_ostride,rowfft_odist,FFTW_FORWARD,FFTW_MEASURE);
 
 
         plan_W2psi=fftw_plan_many_dft(rowfft_rank,rowfft_n,rowfft_howmany,
-                                                reinterpret_cast<fftw_complex*>(W),rowfft_inembed,
-                                                rowfft_istride,rowfft_idist,reinterpret_cast<fftw_complex*>(psiTmp),
-                                                rowfft_onembed,rowfft_ostride,rowfft_odist,FFTW_BACKWARD,FFTW_MEASURE);
+                                      reinterpret_cast<fftw_complex*>(W),rowfft_inembed,
+                                      rowfft_istride,rowfft_idist,reinterpret_cast<fftw_complex*>(psiTmp),
+                                      rowfft_onembed,rowfft_ostride,rowfft_odist,FFTW_BACKWARD,FFTW_MEASURE);
 
 
 
@@ -149,14 +155,14 @@ public:
         int *colfft_inembed = colfft_n, *colfft_onembed = colfft_n;
 
         plan_psi2Y= fftw_plan_many_dft(colfft_rank,colfft_n,colfft_howmany,
-                                                 reinterpret_cast<fftw_complex*>(psiTmp),colfft_inembed,
-                                                 colfft_istride,colfft_idist,reinterpret_cast<fftw_complex*>(Y),
-                                                 colfft_onembed,colfft_ostride,colfft_odist,FFTW_FORWARD,FFTW_MEASURE);
+                                       reinterpret_cast<fftw_complex*>(psiTmp),colfft_inembed,
+                                       colfft_istride,colfft_idist,reinterpret_cast<fftw_complex*>(Y),
+                                       colfft_onembed,colfft_ostride,colfft_odist,FFTW_FORWARD,FFTW_MEASURE);
 
         plan_Y2psi=fftw_plan_many_dft(colfft_rank,colfft_n,colfft_howmany,
-                                                reinterpret_cast<fftw_complex*>(Y),colfft_inembed,
-                                                colfft_istride,colfft_idist,reinterpret_cast<fftw_complex*>(psiTmp),
-                                                colfft_onembed,colfft_ostride,colfft_odist,FFTW_BACKWARD,FFTW_MEASURE);
+                                      reinterpret_cast<fftw_complex*>(Y),colfft_inembed,
+                                      colfft_istride,colfft_idist,reinterpret_cast<fftw_complex*>(psiTmp),
+                                      colfft_onembed,colfft_ostride,colfft_odist,FFTW_BACKWARD,FFTW_MEASURE);
 
 
 
@@ -205,19 +211,32 @@ public:
     double r=0;
     double e2r=0;
 
+    //params for 7
     int N1=6000;
-    int N2=4096;
+    int N2=6000;
 
     double L1=5;
     double L2=80;
+
+    //params for 5
+//    double L1=2;
+//    double L2=8;
+//    int N1=400;
+//    int N2=1500;
+//
+
+
     double dx1=0;
+
     double dx2=0;
 
-    double dtEst=0.0001;
+    double dtEst=0.00005;
     double tFlushStart=0;
     double tFlushStop=0.001;
     double tTotPerFlush=tFlushStop-tFlushStart;
+
     int flushNum=3000;
+
     int stepsPerFlush=static_cast<int>(std::ceil(tTotPerFlush/dtEst));
     double dt=tTotPerFlush/static_cast<double >(stepsPerFlush);
     std::vector<double> timeValsAll;
@@ -251,6 +270,7 @@ public:
     arma::cx_dmat psi0;
     arma::cx_dmat U14Exp;
     arma::cx_drowvec k2Row;
+    arma::cx_dmat psiSpace;
 
     //matrices for computing particle numbers
     arma::sp_cx_dmat H6;
@@ -259,7 +279,8 @@ public:
     arma::sp_cx_dmat NmPart2;
 
     std::string outDir;
-
+    double E1=0;
+    double E2=0;
 public:
 
     /// @param group group number
@@ -329,6 +350,15 @@ public:
 
     ///evolution of wavefunctuion
     void evolution();
+
+    ///
+    /// @param j time ind
+    /// @return analytical solution for g0=0
+    arma::cx_dmat  psit(const int &j);
+
+    double funcf(int n1);
+
+    double funcg(int n2);
 
 };
 
