@@ -218,7 +218,9 @@ public:
     double L1=5;
     double L2=80;
 
+
     //params for 5
+
 //    double L1=2;
 //    double L2=8;
 //    int N1=400;
@@ -279,8 +281,10 @@ public:
     arma::sp_cx_dmat NmPart2;
 
     std::string outDir;
+
     double E1=0;
     double E2=0;
+
 public:
 
     /// @param group group number

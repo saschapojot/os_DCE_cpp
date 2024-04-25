@@ -90,7 +90,9 @@ void os_DCE_Evolution::parseCSV(const int &group, const int &row){
 
     double width1=std::sqrt(-2.0*std::log(height1)/omegac);
 
+
     double minGrid1=width1/20.0;
+
 
     this->N1=static_cast<int>(std::ceil(L1*2/minGrid1));
     if(N1%2==1){
@@ -447,7 +449,7 @@ arma::cx_dmat os_DCE_Evolution::oneFlush(const arma::cx_dmat& psiIn, const int& 
 
 
 //   std::vector<double> diffPerFlush;
-//
+
 //    auto analytical_start= psit(startingInd);
 
 //    analytical_photonPerFlush.push_back(avgNc(analytical_start));
@@ -577,4 +579,5 @@ arma::cx_dmat  os_DCE_Evolution::psit(const int &j){
 
     return psiSpace*std::exp(-1i*E1*tj)*std::exp(-1i*E2*tj)
            *std::exp(1i*0.5*Deltam*tj+1i*0.5*omegac*tj);
+
 }

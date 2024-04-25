@@ -122,7 +122,9 @@ tTotPerFlush=tFlushStop-tFlushStart
 flushTimeStart=flsStart*tTotPerFlush
 flushTimeEnd=flsEnd*tTotPerFlush
 
-dtEst=0.00005
+
+dtEst=0.0001
+
 stepsPerFlush=int(np.ceil(tTotPerFlush/dtEst))
 dt=tTotPerFlush/stepsPerFlush
 
