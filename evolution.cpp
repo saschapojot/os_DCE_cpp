@@ -183,7 +183,7 @@ void os_DCE_Evolution::initPsiSerial(){
         vec2(n2)= f2(n2);
     }
     this->psi0=arma::kron(vec1,vec2);
-    this->psi0/=arma::norm(psi0,2);
+    this->psi0/=arma::norm(psi0,"fro");
 //    std::cout<<"finish init"<<std::endl;
 
 
@@ -193,8 +193,8 @@ void os_DCE_Evolution::initPsiSerial(){
 //    printVec(v2);
     this->psiSpace=arma::kron(vec1,vec2);
 //    std::cout<<psiSpace<<std::endl;
-//    std::cout<<"psiSpace norm="<<arma::norm(psiSpace,2)<<std::endl;
-    psiSpace/=arma::norm(psiSpace,2);
+//    std::cout<<"psiSpace norm="<<arma::norm(psiSpace,"fro")<<std::endl;
+    psiSpace/=arma::norm(psiSpace,"fro");
 
 
 //    std::cout<<psi0<<std::endl;
@@ -455,7 +455,7 @@ arma::cx_dmat os_DCE_Evolution::oneFlush(const arma::cx_dmat& psiIn, const int& 
 //    analytical_photonPerFlush.push_back(avgNc(analytical_start));
 //    analytical_phononPerFlush.push_back(avgNm(analytical_start));
 
-//    diffPerFlush.push_back(arma::norm(analytical_start-psiCurr,2));
+//    diffPerFlush.push_back(arma::norm(analytical_start-psiCurr,"fro"));
     for(int j=0;j<stepsPerFlush;j++){
         int indCurr=startingInd+j;
         psiNext= evolution1Step(indCurr,psiCurr);
@@ -464,7 +464,7 @@ arma::cx_dmat os_DCE_Evolution::oneFlush(const arma::cx_dmat& psiIn, const int& 
         phononPerFlush.push_back(avgNm(psiCurr));
 
 //        analytical_start= psit(indCurr+1);
-//        diffPerFlush.push_back(arma::norm(analytical_start-psiCurr,2));
+//        diffPerFlush.push_back(arma::norm(analytical_start-psiCurr,"fro"));
 
 //        analytical_photonPerFlush.push_back(avgNc(analytical_start));
 //        analytical_phononPerFlush.push_back(avgNm(analytical_start));
